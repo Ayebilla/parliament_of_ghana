@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parliament of Ghana - Advanced Institutional Interaction Visualizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #006b3f;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #ce1126;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .visualization-container {
+            flex: 2;
+            min-width: 300px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            height: 750px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-panel {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            height: 750px;
+            overflow-y: auto;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #006b3f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #004d2c;
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: #ce1126;
+        }
+
+        .node-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #006b3f;
+        }
+
+        .node-info h3 {
+            color: #006b3f;
+            margin-bottom: 10px;
+        }
+
+        .node-info ul {
+            padding-left: 20px;
+        }
+
+        .node-info li {
+            margin-bottom: 8px;
+        }
+
+        .relationship-details {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+
+        .expand-btn {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .expanded-view {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            border-left: 4px solid #1e3a8a;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+
+        .parliament {
+            background: #ce1126;
+        }
+
+        .function {
+            background: #006b3f;
+        }
+
+        .body {
+            background: #ffd700;
+        }
+
+        .institution {
+            background: #1e3a8a;
+        }
+
+        .local {
+            background: #8a2be2;
+        }
+
+        .chraj {
+            background: #ff6b6b;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 15px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .relationship-path {
+            margin-top: 15px;
+            padding: 10px;
+            background: #d1ecf1;
+            border-radius: 5px;
+            border-left: 4px solid #0c5460;
+        }
+
+        .path-step {
+            margin-bottom: 5px;
+            padding: 5px;
+            background: #bee5eb;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .visualization-container, .info-panel {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Parliament of Ghana</h1>
+            <p class="subtitle">Advanced Institutional Interaction Visualizer</p>
+            <p>Trace relationships from Parliament to local governance units</p>
+        </header>
+
+        <div class="controls">
+            <button class="btn active" id="btn-structure">
+                <i class="fas fa-sitemap"></i> Structure
+            </button>
+            <button class="btn" id="btn-functions">
+                <i class="fas fa-tasks"></i> Functions
+            </button>
+            <button class="btn" id="btn-relationships">
+                <i class="fas fa-project-diagram"></i> Relationships
+            </button>
+            <button class="btn" id="btn-full-system">
+                <i class="fas fa-network-wired"></i> Full Governance System
+            </button>
+            <button class="btn" id="btn-chraj">
+                <i class="fas fa-balance-scale"></i> CHRAJ Network
+            </button>
+        </div>
+
+        <div class="content">
+            <div class="visualization-container">
+                <svg id="network" width="100%" height="100%"></svg>
+            </div>
+            
+            <div class="info-panel">
+                <h2>About Parliament of Ghana</h2>
+                <p>The Parliament of Ghana is the legislative body of the Ghanaian government. It is unicameral, consisting of 275 Members of Parliament (MPs) from single-member constituencies.</p>
+                
+                <div class="node-info">
+                    <h3>Selected: Parliament of Ghana</h3>
+                    <p>The Parliament of Ghana is the legislative authority of the country. It exercises oversight over the Executive and ensures accountability in governance.</p>
+                    
+                    <div class="relationship-details">
+                        <h4>Constitutional Basis:</h4>
+                        <p>Established under Chapter 10 of the 1992 Constitution of Ghana, Parliament is the legislative arm of government with powers to make laws, approve budgets, and provide oversight of the Executive.</p>
+                    </div>
+                    
+                    <h4>Key Functions:</h4>
+                    <ul>
+                        <li>Legislation and law-making</li>
+                        <li>Approval of budgets and public expenditure</li>
+                        <li>Oversight of the Executive</li>
+                        <li>Representation of citizens</li>
+                        <li>Ratification of treaties and agreements</li>
+                    </ul>
+                    
+                    <button class="expand-btn" id="expand-parliament">
+                        <i class="fas fa-expand-alt"></i> Explore Parliament's Network
+                    </button>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color parliament"></div>
+                        <span>Parliament</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color function"></div>
+                        <span>Functions</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color body"></div>
+                        <span>Parliamentary Bodies</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color institution"></div>
+                        <span>Other Institutions</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color local"></div>
+                        <span>Local Governance</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color chraj"></div>
+                        <span>CHRAJ Network</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2023 Parliament of Ghana Institutional Interaction Visualizer | Educational Tool</p>
+        </footer>
+    </div>
+
+    <script>
+        // Enhanced data for the visualization with detailed information
+        const data = {
+            structure: {
+                nodes: [
+                    { 
+                        id: "Parliament", 
+                        group: 1, 
+                        type: "parliament", 
+                        description: "The legislative body of Ghana",
+                        details: "The Parliament of Ghana is the legislative authority of Ghana. As a unicameral legislature, it was established by Article 93 of the 1992 Constitution. Parliament is composed of 275 members elected to represent constituencies determined by the Electoral Commission.",
+                        functions: ["Law-making", "Oversight of Executive", "Budget approval", "Representation", "Treaty ratification"],
+                        relationships: [
+                            { target: "Speaker", type: "elects", description: "Parliament elects the Speaker who presides over its proceedings" },
+                            { target: "Clerk", type: "appoints", description: "Parliament appoints the Clerk who serves as the chief administrative officer" },
+                            { target: "MPs", type: "comprises", description: "Parliament is composed of Members of Parliament elected from constituencies" },
+                            { target: "Committees", type: "establishes", description: "Parliament establishes committees to handle specialized legislative work" }
+                        ]
+                    },
+                    { 
+                        id: "Speaker", 
+                        group: 2, 
+                        type: "body", 
+                        description: "Presiding officer of Parliament",
+                        details: "The Speaker is the presiding officer of Parliament, elected by Members of Parliament from among their number or from persons who are members of Parliament. The Speaker is responsible for maintaining order and decorum during parliamentary proceedings.",
+                        functions: ["Presiding over sittings", "Interpreting standing orders", "Maintaining order", "Representing Parliament"],
+                        relationships: [
+                            { target: "Parliament", type: "presides over", description: "The Speaker presides over all parliamentary proceedings" },
+                            { target: "Clerk", type: "supervises", description: "The Speaker supervises the work of the Clerk of Parliament" }
+                        ]
+                    },
+                    { 
+                        id: "Clerk", 
+                        group: 2, 
+                        type: "body", 
+                        description: "Administrative head of Parliament",
+                        details: "The Clerk to Parliament is the chief administrative officer of Parliament, responsible for the day-to-day administration and management of parliamentary affairs. The Clerk advises the Speaker on procedural matters and maintains parliamentary records.",
+                        functions: ["Administrative management", "Record keeping", "Procedural advice", "Committee support"],
+                        relationships: [
+                            { target: "Parliament", type: "serves", description: "The Clerk serves as the chief administrative officer of Parliament" },
+                            { target: "Speaker", type: "reports to", description: "The Clerk reports to and advises the Speaker on parliamentary procedure" }
+                        ]
+                    },
+                    { 
+                        id: "MPs", 
+                        group: 2, 
+                        type: "body", 
+                        description: "275 Members of Parliament",
+                        details: "Members of Parliament (MPs) are elected representatives from single-member constituencies across Ghana. They serve four-year terms and are responsible for representing their constituents, debating and passing legislation, and providing oversight of the executive branch.",
+                        functions: ["Legislation", "Constituency representation", "Oversight", "Budget scrutiny"],
+                        relationships: [
+                            { target: "Parliament", type: "comprise", description: "MPs collectively form the Parliament of Ghana" },
+                            { target: "Committees", type: "serve on", description: "MPs serve on various parliamentary committees" }
+                        ]
+                    },
+                    { 
+                        id: "Committees", 
+                        group: 2, 
+                        type: "body", 
+                        description: "Parliamentary Committees",
+                        details: "Parliamentary Committees are specialized groups of MPs that examine specific issues in detail. They play a crucial role in the legislative process by conducting inquiries, scrutinizing legislation, and providing oversight of government departments and agencies.",
+                        functions: ["Legislative scrutiny", "Policy inquiry", "Oversight", "Public engagement"],
+                        relationships: [
+                            { target: "Parliament", type: "report to", description: "Committees report their findings and recommendations to Parliament" },
+                            { target: "Executive", type: "scrutinize", description: "Committees scrutinize the work of the Executive branch" }
+                        ]
+                    }
+                ],
+                links: [
+                    { source: "Parliament", target: "Speaker", value: 1, relationship: "elects" },
+                    { source: "Parliament", target: "Clerk", value: 1, relationship: "appoints" },
+                    { source: "Parliament", target: "MPs", value: 1, relationship: "comprises" },
+                    { source: "Parliament", target: "Committees", value: 1, relationship: "establishes" },
+                    { source: "Speaker", target: "Clerk", value: 1, relationship: "supervises" }
+                ]
+            },
+            functions: {
+                nodes: [
+                    { 
+                        id: "Parliament", 
+                        group: 1, 
+                        type: "parliament", 
+                        description: "The legislative body of Ghana",
+                        details: "The Parliament of Ghana is the legislative authority of Ghana. As a unicameral legislature, it was established by Article 93 of the 1992 Constitution. Parliament is composed of 275 members elected to represent constituencies determined by the Electoral Commission.",
+                        functions: ["Law-making", "Oversight of Executive", "Budget approval", "Representation", "Treaty ratification"],
+                        relationships: [
+                            { target: "Legislation", type: "primary function", description: "Parliament's core function is to make laws for the governance of Ghana" },
+                            { target: "Oversight", type: "constitutional duty", description: "Parliament provides oversight of the Executive branch of government" },
+                            { target: "Representation", type: "democratic role", description: "Parliament represents the interests of the Ghanaian people" },
+                            { target: "Budget Approval", type: "financial control", description: "Parliament approves the national budget and government expenditure" }
+                        ]
+                    },
+                    { 
+                        id: "Legislation", 
+                        group: 3, 
+                        type: "function", 
+                        description: "Making and passing laws",
+                        details: "The legislative function is Parliament's primary responsibility. This involves the introduction, debate, amendment, and passage of bills that become laws governing the country. The legislative process includes first reading, second reading, committee stage, consideration stage, and third reading.",
+                        functions: ["Bill introduction", "Debate and amendment", "Law passage", "Constitutional review"],
+                        relationships: [
+                            { target: "Parliament", type: "performs", description: "Legislation is performed by Parliament as its primary function" },
+                            { target: "Executive", type: "scrutinizes bills from", description: "Parliament scrutinizes bills presented by the Executive" }
+                        ]
+                    },
+                    { 
+                        id: "Oversight", 
+                        group: 3, 
+                        type: "function", 
+                        description: "Overseeing the Executive",
+                        details: "Parliament exercises oversight over the Executive branch to ensure accountability and transparency in governance. This includes questioning ministers, conducting investigations through committees, and approving key executive appointments. The oversight function is crucial for checks and balances in Ghana's democracy.",
+                        functions: ["Ministerial questioning", "Committee investigations", "Appointment approvals", "Performance monitoring"],
+                        relationships: [
+                            { target: "Parliament", type: "exercises", description: "Parliament exercises oversight over the Executive branch" },
+                            { target: "Executive", type: "oversees", description: "Parliament oversees the activities of the Executive" }
+                        ]
+                    },
+                    { 
+                        id: "Representation", 
+                        group: 3, 
+                        type: "function", 
+                        description: "Representing citizens",
+                        details: "As elected representatives, MPs have a duty to represent the interests and concerns of their constituents in Parliament. This involves articulating constituency needs during debates, addressing grievances, and ensuring that government policies and programs benefit all Ghanaians equitably.",
+                        functions: ["Constituency advocacy", "Public interest representation", "Grievance address", "Policy feedback"],
+                        relationships: [
+                            { target: "Parliament", type: "fulfills", description: "Parliament fulfills its representative function through MPs" },
+                            { target: "Citizens", type: "represents", description: "Parliament represents the interests of Ghanaian citizens" }
+                        ]
+                    },
+                    { 
+                        id: "Budget Approval", 
+                        group: 3, 
+                        type: "function", 
+                        description: "Approving national budget",
+                        details: "Parliament has the power of the purse, exercising control over public finances by examining and approving the national budget presented by the Executive. This includes scrutiny of revenue estimates, expenditure allocations, and overall fiscal policy to ensure responsible use of public funds.",
+                        functions: ["Budget scrutiny", "Expenditure approval", "Revenue oversight", "Fiscal policy review"],
+                        relationships: [
+                            { target: "Parliament", type: "exercises", description: "Parliament exercises financial control through budget approval" },
+                            { target: "Executive", type: "approves budget of", description: "Parliament approves the budget presented by the Executive" }
+                        ]
+                    },
+                    { 
+                        id: "Treaty Ratification", 
+                        group: 3, 
+                        type: "function", 
+                        description: "Ratifying international agreements",
+                        details: "Parliament has the authority to ratify international treaties, agreements, and conventions entered into by the Executive. This ensures that Ghana's international commitments have democratic legitimacy and align with national interests and constitutional provisions.",
+                        functions: ["Treaty examination", "International agreement ratification", "Conformance verification", "Implementation oversight"],
+                        relationships: [
+                            { target: "Parliament", type: "authorizes", description: "Parliament authorizes international treaties through ratification" },
+                            { target: "Executive", type: "ratifies treaties from", description: "Parliament ratifies treaties negotiated by the Executive" }
+                        ]
+                    }
+                ],
+                links: [
+                    { source: "Parliament", target: "Legislation", value: 1, relationship: "performs" },
+                    { source: "Parliament", target: "Oversight", value: 1, relationship: "exercises" },
+                    { source: "Parliament", target: "Representation", value: 1, relationship: "fulfills" },
+                    { source: "Parliament", target: "Budget Approval", value: 1, relationship: "controls" },
+                    { source: "Parliament", target: "Treaty Ratification", value: 1, relationship: "authorizes" }
+                ]
+            },
+            relationships: {
+                nodes: [
+                    { 
+                        id: "Parliament", 
+                        group: 1, 
+                        type: "parliament", 
+                        description: "The legislative body of Ghana",
+                        details: "The Parliament of Ghana is the legislative authority of Ghana. As a unicameral legislature, it was established by Article 93 of the 1992 Constitution. Parliament is composed of 275 members elected to represent constituencies determined by the Electoral Commission.",
+                        functions: ["Law-making", "Oversight of Executive", "Budget approval", "Representation", "Treaty ratification"],
+                        relationships: [
+                            { target: "Executive", type: "oversight", description: "Parliament exercises oversight over the Executive branch through questions, committees, and approval processes" },
+                            { target: "Judiciary", type: "collaboration", description: "Parliament collaborates with the Judiciary on law implementation and judicial appointments" },
+                            { target: "Electoral Commission", type: "oversight", description: "Parliament provides oversight and approves budgets for the Electoral Commission" },
+                            { target: "Auditor General", type: "oversight", description: "Parliament receives and acts on audit reports from the Auditor General" },
+                            { target: "CHRAJ", type: "oversight", description: "Parliament provides oversight and receives reports from the Commission on Human Rights and Administrative Justice" }
+                        ]
+                    },
+                    { 
+                        id: "Executive", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "President and Cabinet",
+                        details: "The Executive branch of Ghana is headed by the President, who is both the head of state and head of government. The President appoints ministers who form the Cabinet and are responsible for implementing government policies and administering state affairs.",
+                        functions: ["Policy implementation", "Administration", "International relations", "Budget preparation"],
+                        relationships: [
+                            { target: "Parliament", type: "accountable to", description: "The Executive is accountable to Parliament and must seek approval for key decisions" },
+                            { target: "MMDAs", type: "supervises", description: "The Executive supervises Metropolitan, Municipal and District Assemblies" }
+                        ]
+                    },
+                    { 
+                        id: "Judiciary", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Courts and judicial system",
+                        details: "The Judiciary of Ghana is the system of courts that interprets and applies the law. It is independent of the Executive and Legislature. The judiciary consists of the Superior Courts (Supreme Court, Court of Appeal, High Court) and lower courts.",
+                        functions: ["Adjudication", "Constitutional interpretation", "Judicial review", "Dispute resolution"],
+                        relationships: [
+                            { target: "Parliament", type: "interpret laws", description: "The Judiciary interprets laws passed by Parliament" },
+                            { target: "Executive", type: "judicial review", description: "The Judiciary reviews executive actions for constitutionality" }
+                        ]
+                    },
+                    { 
+                        id: "Electoral Commission", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Manages elections",
+                        details: "The Electoral Commission of Ghana is an independent constitutional body established under Article 43 of the Constitution. It is responsible for organizing and supervising all public elections and referenda, including parliamentary and presidential elections.",
+                        functions: ["Election management", "Voter registration", "Boundary delimitation", "Electoral education"],
+                        relationships: [
+                            { target: "Parliament", type: "accountable to", description: "The Electoral Commission is accountable to Parliament for its operations and budget" },
+                            { target: "Political Parties", type: "regulates", description: "The Electoral Commission registers and regulates political parties" }
+                        ]
+                    },
+                    { 
+                        id: "Auditor General", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Audits public accounts",
+                        details: "The Auditor-General is an independent constitutional officer appointed by the President in consultation with the Council of State. The office audits and reports on the public accounts of Ghana and all public offices, including courts, central and local government administrations.",
+                        functions: ["Financial audit", "Performance audit", "Compliance audit", "Reporting to Parliament"],
+                        relationships: [
+                            { target: "Parliament", type: "reports to", description: "The Auditor General submits audit reports to Parliament for consideration" },
+                            { target: "Executive", type: "audits", description: "The Auditor General audits all executive branch institutions" }
+                        ]
+                    },
+                    { 
+                        id: "CHRAJ", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Commission on Human Rights",
+                        details: "The Commission on Human Rights and Administrative Justice (CHRAJ) is an independent national human rights institution established under the 1992 Constitution. It has a triple mandate of human rights protection, anti-corruption, and administrative justice.",
+                        functions: ["Human rights protection", "Anti-corruption", "Administrative justice", "Public education"],
+                        relationships: [
+                            { target: "Parliament", type: "reports to", description: "CHRAJ submits annual and special reports to Parliament" },
+                            { target: "Executive", type: "investigates", description: "CHRAJ investigates complaints of administrative injustice against executive bodies" }
+                        ]
+                    }
+                ],
+                links: [
+                    { source: "Parliament", target: "Executive", value: 2, relationship: "oversight" },
+                    { source: "Parliament", target: "Judiciary", value: 1, relationship: "collaboration" },
+                    { source: "Parliament", target: "Electoral Commission", value: 1, relationship: "oversight" },
+                    { source: "Parliament", target: "Auditor General", value: 2, relationship: "receives reports" },
+                    { source: "Parliament", target: "CHRAJ", value: 1, relationship: "receives reports" }
+                ]
+            },
+            fullSystem: {
+                nodes: [
+                    { 
+                        id: "Parliament", 
+                        group: 1, 
+                        type: "parliament", 
+                        description: "The legislative body of Ghana",
+                        details: "The Parliament of Ghana is the legislative authority of Ghana. As a unicameral legislature, it was established by Article 93 of the 1992 Constitution. Parliament is composed of 275 members elected to represent constituencies determined by the Electoral Commission.",
+                        functions: ["Law-making", "Oversight of Executive", "Budget approval", "Representation", "Treaty ratification"],
+                        relationships: [
+                            { target: "Executive", type: "oversight", description: "Parliament exercises oversight over the Executive branch" },
+                            { target: "Regional Coordinating Councils", type: "oversight", description: "Parliament provides oversight of regional administration" }
+                        ]
+                    },
+                    { 
+                        id: "Executive", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "President and Cabinet",
+                        details: "The Executive branch of Ghana is headed by the President, who is both the head of state and head of government. The President appoints ministers who form the Cabinet and are responsible for implementing government policies and administering state affairs.",
+                        functions: ["Policy implementation", "Administration", "International relations", "Budget preparation"],
+                        relationships: [
+                            { target: "Parliament", type: "accountable to", description: "The Executive is accountable to Parliament" },
+                            { target: "Regional Coordinating Councils", type: "supervises", description: "The Executive supervises Regional Coordinating Councils" }
+                        ]
+                    },
+                    { 
+                        id: "Regional Coordinating Councils", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Regional administration bodies",
+                        details: "Regional Coordinating Councils (RCCs) are established in each of Ghana's 16 administrative regions. They coordinate the administration of government policies and programs at the regional level and supervise the Metropolitan, Municipal and District Assemblies (MMDAs) within their regions.",
+                        functions: ["Regional coordination", "Policy implementation", "Supervision of MMDAs", "Resource allocation"],
+                        relationships: [
+                            { target: "Executive", type: "reports to", description: "RCCs report to the Executive through the Ministry of Local Government" },
+                            { target: "MMDAs", type: "supervises", description: "RCCs supervise Metropolitan, Municipal and District Assemblies" }
+                        ]
+                    },
+                    { 
+                        id: "MMDAs", 
+                        group: 5, 
+                        type: "local", 
+                        description: "Metropolitan, Municipal and District Assemblies",
+                        details: "Metropolitan, Municipal and District Assemblies (MMDAs) are the highest political and administrative authorities at the local level. They are responsible for the overall development of their districts, including formulation and execution of plans, programs, and strategies.",
+                        functions: ["Local governance", "Service delivery", "Revenue collection", "By-law making"],
+                        relationships: [
+                            { target: "Regional Coordinating Councils", type: "accountable to", description: "MMDAs are accountable to Regional Coordinating Councils" },
+                            { target: "Unit Committees", type: "supervises", description: "MMDAs supervise Unit Committees in their districts" }
+                        ]
+                    },
+                    { 
+                        id: "Unit Committees", 
+                        group: 5, 
+                        type: "local", 
+                        description: "Basic unit of local governance",
+                        details: "Unit Committees are the lowest level of local governance in Ghana, established under the Local Governance Act, 2016 (Act 936). Each unit committee serves an electoral area with a population of 500-1,000 people in rural areas and 1,500 people in urban areas.",
+                        functions: ["Mobilization of communal labor", "Revenue collection", "Registration of births and deaths", "Environmental cleanliness"],
+                        relationships: [
+                            { target: "MMDAs", type: "reports to", description: "Unit Committees report to their respective MMDAs" },
+                            { target: "Communities", type: "serves", description: "Unit Committees serve as the direct link to local communities" }
+                        ]
+                    }
+                ],
+                links: [
+                    { source: "Parliament", target: "Executive", value: 2, relationship: "oversight" },
+                    { source: "Executive", target: "Regional Coordinating Councils", value: 1, relationship: "supervises" },
+                    { source: "Regional Coordinating Councils", target: "MMDAs", value: 1, relationship: "supervises" },
+                    { source: "MMDAs", target: "Unit Committees", value: 1, relationship: "supervises" }
+                ]
+            },
+            chraj: {
+                nodes: [
+                    { 
+                        id: "CHRAJ", 
+                        group: 6, 
+                        type: "chraj", 
+                        description: "Commission on Human Rights and Administrative Justice",
+                        details: "The Commission on Human Rights and Administrative Justice (CHRAJ) is an independent national human rights institution established under Chapter 18 of the 1992 Constitution of Ghana. It has a triple mandate of human rights protection, anti-corruption, and administrative justice. CHRAJ investigates complaints of violations of fundamental rights and freedoms, injustice, corruption, abuse of power, and unfair treatment of any person by a public officer.",
+                        functions: ["Human rights investigation", "Corruption investigation", "Administrative justice", "Public education", "Legal reform advocacy"],
+                        relationships: [
+                            { target: "Parliament", type: "reports to", description: "CHRAJ submits annual reports to Parliament on its activities" },
+                            { target: "Executive", type: "investigates", description: "CHRAJ investigates complaints against executive bodies and officials" },
+                            { target: "Judiciary", type: "collaborates with", description: "CHRAJ collaborates with the judiciary on human rights cases" },
+                            { target: "Public Services", type: "monitors", description: "CHRAJ monitors public services for administrative justice" },
+                            { target: "Citizens", type: "serves", description: "CHRAJ serves citizens by addressing human rights complaints" }
+                        ]
+                    },
+                    { 
+                        id: "Parliament", 
+                        group: 1, 
+                        type: "parliament", 
+                        description: "The legislative body of Ghana",
+                        details: "Parliament provides oversight of CHRAJ and receives its annual reports. It also considers CHRAJ's recommendations for legal and policy reforms related to human rights and anti-corruption.",
+                        functions: ["Oversight of CHRAJ", "Budget approval", "Legal reform consideration"],
+                        relationships: [
+                            { target: "CHRAJ", type: "oversight", description: "Parliament provides oversight of CHRAJ's operations" },
+                            { target: "CHRAJ", type: "receives reports from", description: "Parliament receives and considers CHRAJ's annual reports" }
+                        ]
+                    },
+                    { 
+                        id: "Executive", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "President and Cabinet",
+                        details: "The Executive implements CHRAJ recommendations and provides funding for its operations. Various ministries and departments cooperate with CHRAJ investigations and implement its recommendations.",
+                        functions: ["Implementation of CHRAJ recommendations", "Funding provision", "Cooperation with investigations"],
+                        relationships: [
+                            { target: "CHRAJ", type: "implements recommendations of", description: "The Executive implements CHRAJ's recommendations" },
+                            { target: "CHRAJ", type: "funds", description: "The Executive provides funding for CHRAJ's operations" }
+                        ]
+                    },
+                    { 
+                        id: "Judiciary", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Courts and judicial system",
+                        details: "The Judiciary collaborates with CHRAJ on human rights cases and may enforce CHRAJ recommendations through court orders. CHRAJ may also refer cases to the judiciary for prosecution.",
+                        functions: ["Case collaboration", "Enforcement of recommendations", "Prosecution of referred cases"],
+                        relationships: [
+                            { target: "CHRAJ", type: "collaborates with", description: "The Judiciary collaborates with CHRAJ on human rights cases" },
+                            { target: "CHRAJ", type: "enforces recommendations of", description: "The Judiciary may enforce CHRAJ recommendations" }
+                        ]
+                    },
+                    { 
+                        id: "Public Services", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Government departments and agencies",
+                        details: "All public services in Ghana are subject to CHRAJ's oversight regarding administrative justice. CHRAJ investigates complaints of maladministration, corruption, and human rights violations within public services.",
+                        functions: ["Subject to CHRAJ oversight", "Implementation of CHRAJ directives", "Cooperation with investigations"],
+                        relationships: [
+                            { target: "CHRAJ", type: "investigated by", description: "Public services are investigated by CHRAJ for maladministration" },
+                            { target: "CHRAJ", type: "implements directives of", description: "Public services implement CHRAJ's directives" }
+                        ]
+                    },
+                    { 
+                        id: "Citizens", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "Ghanaian citizens and residents",
+                        details: "Citizens can file complaints with CHRAJ regarding human rights violations, administrative injustice, and corruption. CHRAJ serves as an accessible mechanism for citizens to seek redress against state authorities.",
+                        functions: ["Filing complaints", "Participating in investigations", "Benefiting from CHRAJ services"],
+                        relationships: [
+                            { target: "CHRAJ", type: "files complaints with", description: "Citizens file human rights complaints with CHRAJ" },
+                            { target: "CHRAJ", type: "receives services from", description: "Citizens receive human rights protection services from CHRAJ" }
+                        ]
+                    },
+                    { 
+                        id: "International Bodies", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "International human rights organizations",
+                        details: "CHRAJ collaborates with international human rights bodies like the UN Human Rights Council and African Commission on Human and Peoples' Rights. It submits reports on Ghana's human rights situation and implements international human rights standards.",
+                        functions: ["International reporting", "Standards implementation", "Collaborative projects"],
+                        relationships: [
+                            { target: "CHRAJ", type: "collaborates with", description: "International bodies collaborate with CHRAJ on human rights issues" },
+                            { target: "CHRAJ", type: "receives accreditation from", description: "CHRAJ receives accreditation from international human rights bodies" }
+                        ]
+                    },
+                    { 
+                        id: "Civil Society", 
+                        group: 4, 
+                        type: "institution", 
+                        description: "NGOs and human rights organizations",
+                        details: "Civil society organizations collaborate with CHRAJ on human rights education, monitoring, and advocacy. They often refer cases to CHRAJ and participate in its public education programs.",
+                        functions: ["Case referral", "Collaborative advocacy", "Public education partnership"],
+                        relationships: [
+                            { target: "CHRAJ", type: "collaborates with", description: "Civil society organizations collaborate with CHRAJ" },
+                            { target: "CHRAJ", type: "refers cases to", description: "Civil society refers human rights cases to CHRAJ" }
+                        ]
+                    }
+                ],
+                links: [
+                    { source: "CHRAJ", target: "Parliament", value: 2, relationship: "reports to" },
+                    { source: "CHRAJ", target: "Executive", value: 2, relationship: "investigates" },
+                    { source: "CHRAJ", target: "Judiciary", value: 1, relationship: "collaborates with" },
+                    { source: "CHRAJ", target: "Public Services", value: 2, relationship: "monitors" },
+                    { source: "CHRAJ", target: "Citizens", value: 3, relationship: "serves" },
+                    { source: "CHRAJ", target: "International Bodies", value: 1, relationship: "collaborates with" },
+                    { source: "CHRAJ", target: "Civil Society", value: 1, relationship: "partners with" },
+                    { source: "Parliament", target: "CHRAJ", value: 1, relationship: "oversight" },
+                    { source: "Executive", target: "CHRAJ", value: 1, relationship: "funds" },
+                    { source: "Citizens", target: "CHRAJ", value: 2, relationship: "files complaints with" }
+                ]
+            }
+        };
+
+        // Initialize visualization
+        const svg = d3.select("#network");
+        const width = document.querySelector('.visualization-container').clientWidth;
+        const height = document.querySelector('.visualization-container').clientHeight;
+
+        // Set up simulation
+        const simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id(d => d.id).distance(100))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        // Create zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        const g = svg.append("g");
+
+        // Color scale
+        const color = d3.scaleOrdinal()
+            .domain(["parliament", "body", "function", "institution", "local", "chraj"])
+            .range(["#ce1126", "#ffd700", "#006b3f", "#1e3a8a", "#8a2be2", "#ff6b6b"]);
+
+        // Tooltip
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("position", "absolute")
+            .style("background", "rgba(0,0,0,0.8)")
+            .style("color", "white")
+            .style("padding", "8px")
+            .style("border-radius", "4px")
+            .style("font-size", "14px")
+            .style("pointer-events", "none")
+            .style("opacity", 0);
+
+        // Track expanded nodes
+        let expandedNodes = new Set();
+        let currentData = data.structure;
+        
+        // Initial visualization
+        updateVisualization(currentData);
+
+        // Button event handlers
+        document.getElementById("btn-structure").addEventListener("click", function() {
+            setActiveButton(this);
+            currentData = data.structure;
+            updateVisualization(currentData);
+        });
+
+        document.getElementById("btn-functions").addEventListener("click", function() {
+            setActiveButton(this);
+            currentData = data.functions;
+            updateVisualization(currentData);
+        });
+
+        document.getElementById("btn-relationships").addEventListener("click", function() {
+            setActiveButton(this);
+            currentData = data.relationships;
+            updateVisualization(currentData);
+        });
+
+        document.getElementById("btn-full-system").addEventListener("click", function() {
+            setActiveButton(this);
+            currentData = data.fullSystem;
+            updateVisualization(currentData);
+        });
+
+        document.getElementById("btn-chraj").addEventListener("click", function() {
+            setActiveButton(this);
+            currentData = data.chraj;
+            updateVisualization(currentData);
+        });
+
+        // Expand button handler
+        document.getElementById("expand-parliament").addEventListener("click", function() {
+            // For demonstration, switch to full system view
+            document.getElementById("btn-full-system").click();
+        });
+
+        function setActiveButton(button) {
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+        }
+
+        function updateVisualization(graphData) {
+            // Remove existing elements
+            g.selectAll("*").remove();
+
+            // Create links
+            const link = g.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(graphData.links)
+                .enter().append("line")
+                .attr("stroke", "#999")
+                .attr("stroke-opacity", 0.6)
+                .attr("stroke-width", d => Math.sqrt(d.value))
+                .attr("marker-end", "url(#arrowhead)");
+
+            // Create arrow markers for directed graphs
+            svg.append("defs").selectAll("marker")
+                .data([{id: "arrowhead", refX: 9, refY: 2, markerWidth: 6, markerHeight: 4, orient: "auto"}])
+                .enter().append("marker")
+                .attr("id", d => d.id)
+                .attr("viewBox", "0 0 10 10")
+                .attr("refX", d => d.refX)
+                .attr("refY", d => d.refY)
+                .attr("markerWidth", d => d.markerWidth)
+                .attr("markerHeight", d => d.markerHeight)
+                .attr("orient", d => d.orient)
+                .append("path")
+                .attr("d", "M0,0 L0,4 L9,2 z")
+                .style("fill", "#999");
+
+            // Create nodes
+            const node = g.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(graphData.nodes)
+                .enter().append("circle")
+                .attr("r", d => d.type === "parliament" ? 20 : 15)
+                .attr("fill", d => color(d.type))
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1.5)
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended))
+                .on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html(`<strong>${d.id}</strong><br/>${d.description}<br/><em>Click for details</em>`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                })
+                .on("click", function(event, d) {
+                    updateInfoPanel(d);
+                    // Show relationship path if applicable
+                    showRelationshipPath(d);
+                });
+
+            // Add labels
+            const label = g.append("g")
+                .attr("class", "labels")
+                .selectAll("text")
+                .data(graphData.nodes)
+                .enter().append("text")
+                .text(d => d.id)
+                .attr("font-size", d => d.type === "parliament" ? "14px" : "10px")
+                .attr("dx", 12)
+                .attr("dy", 4);
+
+            // Update simulation
+            simulation.nodes(graphData.nodes);
+            simulation.force("link").links(graphData.links);
+            simulation.alpha(1).restart();
+
+            // Update positions on tick
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+
+                label
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y);
+            });
+        }
+
+        function updateInfoPanel(nodeData) {
+            const infoPanel = document.querySelector('.node-info');
+            
+            let content = `
+                <h3>${nodeData.id}</h3>
+                <p>${nodeData.description}</p>
+                
+                <div class="relationship-details">
+                    <h4>Details:</h4>
+                    <p>${nodeData.details}</p>
+                </div>
+            `;
+            
+            if (nodeData.functions && nodeData.functions.length > 0) {
+                content += `
+                    <h4>Key Functions:</h4>
+                    <ul>
+                        ${nodeData.functions.map(func => `<li>${func}</li>`).join('')}
+                    </ul>
+                `;
+            }
+            
+            if (nodeData.relationships && nodeData.relationships.length > 0) {
+                content += `
+                    <div class="relationship-details">
+                        <h4>Key Relationships:</h4>
+                        <ul>
+                            ${nodeData.relationships.map(rel => `
+                                <li><strong>${rel.target}</strong>: ${rel.type} - ${rel.description}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // Add expand button for institutions that have further connections
+            if (nodeData.type === "institution" || nodeData.type === "local" || nodeData.type === "chraj") {
+                content += `
+                    <button class="expand-btn" onclick="expandNode('${nodeData.id}')">
+                        <i class="fas fa-expand-alt"></i> Explore ${nodeData.id}'s Network
+                    </button>
+                `;
+            }
+            
+            infoPanel.innerHTML = content;
+        }
+
+        function showRelationshipPath(nodeData) {
+            const infoPanel = document.querySelector('.node-info');
+            let pathHTML = '';
+            
+            // For demonstration, show a sample relationship path
+            if (nodeData.id === "Unit Committees") {
+                pathHTML = `
+                    <div class="relationship-path">
+                        <h4>Governance Relationship Path:</h4>
+                        <div class="path-step">Unit Committees → MMDAs</div>
+                        <div class="path-step">MMDAs → Regional Coordinating Councils</div>
+                        <div class="path-step">Regional Coordinating Councils → Executive</div>
+                        <div class="path-step">Executive → Parliament</div>
+                        <p><em>Changes at the Unit Committee level can influence policy decisions at Parliament through this chain of accountability.</em></p>
+                    </div>
+                `;
+            } else if (nodeData.id === "Parliament") {
+                pathHTML = `
+                    <div class="relationship-path">
+                        <h4>Governance Relationship Path:</h4>
+                        <div class="path-step">Parliament → Executive</div>
+                        <div class="path-step">Executive → Regional Coordinating Councils</div>
+                        <div class="path-step">Regional Coordinating Councils → MMDAs</div>
+                        <div class="path-step">MMDAs → Unit Committees</div>
+                        <p><em>Legislation passed by Parliament affects governance at all levels down to the basic unit of local administration.</em></p>
+                    </div>
+                `;
+            } else if (nodeData.id === "CHRAJ") {
+                pathHTML = `
+                    <div class="relationship-path">
+                        <h4>Human Rights Protection Path:</h4>
+                        <div class="path-step">Citizens → CHRAJ (file complaints)</div>
+                        <div class="path-step">CHRAJ → Public Services (investigates)</div>
+                        <div class="path-step">CHRAJ → Executive (recommends actions)</div>
+                        <div class="path-step">CHRAJ → Parliament (reports findings)</div>
+                        <div class="path-step">CHRAJ → Judiciary (refers cases)</div>
+                        <p><em>CHRAJ serves as a bridge between citizens and state institutions, ensuring human rights protection throughout the governance system.</em></p>
+                    </div>
+                `;
+            }
+            
+            // Append to existing content
+            if (pathHTML) {
+                infoPanel.innerHTML += pathHTML;
+            }
+        }
+
+        // Global function for expanding nodes
+        window.expandNode = function(nodeId) {
+            if (nodeId === "Executive" || nodeId === "MMDAs") {
+                document.getElementById("btn-full-system").click();
+            } else if (nodeId === "CHRAJ") {
+                document.getElementById("btn-chraj").click();
+            } else if (nodeId === "Electoral Commission" || nodeId === "Auditor General") {
+                document.getElementById("btn-relationships").click();
+            }
+            
+            // In a more advanced implementation, this would dynamically load
+            // additional nodes related to the selected institution
+            alert(`Expanding view to show ${nodeId}'s network connections.`);
+        };
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    </script>
+</body>
+</html>
